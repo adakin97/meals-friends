@@ -1,0 +1,1704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Meals">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
+  <title>Meals</title>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js');
+    }
+  </script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    :root {
+      --bg: #0a0a0a;
+      --card: #161616;
+      --accent: #c6f135;
+      --accent2: #888888;
+      --penguin: #c6f135;
+      --penguin-belly: #0a0a0a;
+      --zebra: #2a2a2a;
+      --zebra-stripe: #3a3a3a;
+      --lauren: #a78bfa;
+      --together: #fb923c;
+      --text: #ffffff;
+      --sub: #888888;
+      --border: #252525;
+      --radius: 14px;
+      --header-h: 56px;
+      --tab-h: 60px;
+      --header-bg: rgba(10,10,10,0.92);
+      --nav-bg: rgba(10,10,10,0.92);
+      --modal-bg: #1a1a1a;
+    }
+
+    body.light {
+      --bg: #f2f2f7;
+      --card: #ffffff;
+      --accent: #5a9200;
+      --penguin: #5a9200;
+      --penguin-belly: #ffffff;
+      --lauren: #6d28d9;
+      --together: #c2560a;
+      --text: #111111;
+      --sub: #666666;
+      --border: #e0e0e0;
+      --header-bg: rgba(242,242,247,0.92);
+      --nav-bg: rgba(255,255,255,0.92);
+      --modal-bg: #f9f9f9;
+    }
+
+    .theme-toggle {
+      background: none; border: none; cursor: pointer;
+      font-size: 18px; padding: 6px; border-radius: 8px;
+      line-height: 1; flex-shrink: 0;
+    }
+    .theme-toggle:active { background: var(--border); }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100dvh;
+      padding-bottom: calc(var(--tab-h) + env(safe-area-inset-bottom) + 12px);
+      padding-top: calc(var(--header-h) + env(safe-area-inset-top) + 8px);
+    }
+
+    /* HEADER */
+    header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: calc(var(--header-h) + env(safe-area-inset-top));
+      padding-top: env(safe-area-inset-top);
+      background: var(--header-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-left: 16px;
+      padding-right: 16px;
+      z-index: 100;
+    }
+
+    header h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
+    header .week-nav { display: flex; align-items: center; gap: 8px; }
+    header .week-nav button {
+      background: none; border: none; font-size: 20px; cursor: pointer;
+      color: var(--accent); padding: 4px 8px; border-radius: 8px;
+    }
+    header .week-nav button:active { background: var(--border); }
+    header .week-label { font-size: 13px; color: var(--sub); font-weight: 500; min-width: 80px; text-align: center; }
+
+    /* TABS */
+    nav {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: calc(var(--tab-h) + env(safe-area-inset-bottom));
+      padding-bottom: env(safe-area-inset-bottom);
+      background: var(--nav-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-top: 1px solid var(--border);
+      display: flex;
+      z-index: 100;
+    }
+
+    nav button {
+      flex: 1; background: none; border: none; cursor: pointer;
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 3px;
+      font-size: 10px; font-weight: 600; color: var(--sub);
+      text-transform: uppercase; letter-spacing: 0.5px;
+      transition: color 0.15s;
+    }
+
+    nav button.active { color: var(--accent); }
+    nav button svg { width: 22px; height: 22px; stroke-width: 1.8; }
+
+    /* VIEWS */
+    .view { display: none; padding: 16px; padding-top: 24px; }
+    .view.active { display: block; }
+
+    /* PLANNER */
+    .day-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      margin-bottom: 12px;
+      overflow: hidden;
+    }
+
+    .day-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .day-name {
+      font-weight: 700;
+      font-size: 15px;
+    }
+
+    .day-name.today { color: var(--accent); }
+
+    .day-date { font-size: 12px; color: var(--sub); }
+
+    .day-body { padding: 12px 14px; }
+
+    .meal-select-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .meal-picker {
+      flex: 1;
+      min-width: 0;
+      width: 0;
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 36px 8px 12px;
+      font-size: 14px;
+      color: var(--text);
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+    }
+
+    .meal-picker:focus { outline: none; border-color: var(--accent); }
+
+    .clear-btn {
+      background: none; border: none; cursor: pointer;
+      color: var(--sub); font-size: 18px; padding: 4px;
+      line-height: 1; border-radius: 6px;
+    }
+
+    .clear-btn:active { background: var(--border); }
+
+    .cook-row {
+      display: flex;
+      gap: 6px;
+    }
+
+    .cook-pill {
+      flex: 1;
+      padding: 7px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: transparent;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--sub);
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s;
+    }
+
+    .cook-pill.active-alex {
+      background: rgba(198, 241, 53, 0.1);
+      border-color: var(--penguin);
+      color: var(--penguin);
+    }
+
+    .cook-pill.active-partner {
+      background: rgba(167, 139, 250, 0.1);
+      border-color: var(--lauren);
+      color: var(--lauren);
+    }
+
+    .cook-pill.active-together {
+      background: rgba(251, 146, 60, 0.1);
+      border-color: var(--together);
+      color: var(--together);
+    }
+
+    .ingredients-toggle {
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--accent);
+      cursor: pointer;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .ingredients-toggle.hidden { display: none; }
+
+    .ingredients-list {
+      margin-top: 8px;
+      padding: 10px 12px;
+      background: var(--bg);
+      border-radius: 10px;
+      font-size: 13px;
+      color: var(--sub);
+      line-height: 1.7;
+    }
+
+    .ingredients-list.hidden { display: none; }
+
+    .no-meal { font-size: 13px; color: var(--sub); font-style: italic; }
+
+    /* MEALS LIBRARY */
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .section-title { font-size: 16px; font-weight: 700; }
+
+    .add-btn {
+      background: var(--penguin);
+      color: var(--penguin-belly);
+      border: none;
+      border-radius: 10px;
+      padding: 8px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .add-btn:active { opacity: 0.85; }
+
+    .meal-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      margin-bottom: 12px;
+      overflow: hidden;
+    }
+
+    .meal-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 14px;
+      cursor: pointer;
+    }
+
+    .meal-card-name {
+      font-weight: 600;
+      font-size: 15px;
+    }
+
+    .meal-card-meta {
+      font-size: 12px;
+      color: var(--sub);
+      margin-top: 2px;
+    }
+
+    .meal-card-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .icon-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 6px;
+      border-radius: 8px;
+      color: var(--sub);
+      display: flex;
+      align-items: center;
+    }
+
+    .icon-btn:active { background: var(--border); }
+    .icon-btn.del { color: #e05c5c; }
+
+    .meal-card-body {
+      padding: 0 14px 14px;
+      display: none;
+    }
+
+    .meal-card-body.open { display: block; }
+
+    .ingredient-tag {
+      display: inline-block;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 4px 10px;
+      font-size: 12px;
+      color: var(--text);
+      margin: 3px 3px 0 0;
+    }
+
+    .meal-source {
+      font-size: 12px;
+      color: var(--accent);
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .meal-source a { color: var(--accent); text-decoration: none; }
+    .meal-source a:hover { text-decoration: underline; }
+
+    .meal-notes {
+      font-size: 13px;
+      color: var(--sub);
+      margin-top: 8px;
+      padding: 8px 10px;
+      background: var(--bg);
+      border-radius: 8px;
+      line-height: 1.5;
+    }
+
+    .star-rating {
+      display: flex;
+      gap: 4px;
+      margin-top: 4px;
+    }
+
+    .star-rating .star {
+      cursor: pointer;
+      font-size: 24px;
+      color: var(--border);
+      transition: color 0.15s;
+      background: none;
+      border: none;
+      padding: 4px;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    .star-rating .star.filled { color: #e8b730; }
+    .star-rating .star:active { transform: scale(1.2); }
+
+    .rating-display {
+      font-size: 12px;
+      color: #e8b730;
+      letter-spacing: 1px;
+    }
+
+    .dual-rating {
+      margin-top: 10px;
+    }
+
+    .dual-rating .rating-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 2px;
+    }
+
+    .dual-rating .rating-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--sub);
+      min-width: 52px;
+    }
+
+    .week-group-header {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--sub);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin: 16px 0 8px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .week-group-header:first-child { margin-top: 0; }
+
+    .cook-badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border: 1px solid;
+    }
+
+    .cook-badge.alex {
+      background: rgba(198, 241, 53, 0.1);
+      border-color: rgba(198, 241, 53, 0.4);
+      color: var(--penguin);
+    }
+    .cook-badge.partner {
+      background: rgba(167, 139, 250, 0.1);
+      border-color: rgba(167, 139, 250, 0.4);
+      color: var(--lauren);
+    }
+    .cook-badge.together {
+      background: rgba(251, 146, 60, 0.1);
+      border-color: rgba(251, 146, 60, 0.4);
+      color: var(--together);
+    }
+
+    /* DAY NOTE */
+    .day-note-row {
+      margin-top: 10px; padding-top: 10px;
+      border-top: 1px solid var(--border);
+    }
+    .day-note-input {
+      width: 100%; padding: 7px 11px;
+      background: transparent; border: 1.5px solid var(--border);
+      border-radius: 10px; font-size: 16px; color: var(--sub);
+      outline: none; font-family: inherit;
+    }
+    .day-note-input:focus { border-color: var(--accent); color: var(--text); }
+    .day-note-input::placeholder { color: var(--border); font-style: italic; }
+
+    /* SHOP */
+    .shop-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 12px;
+    }
+    .shop-add-row {
+      display: flex; gap: 8px; margin-bottom: 16px;
+    }
+    .shop-add-row input {
+      flex: 1; min-width: 0;
+      padding: 9px 12px; background: var(--card);
+      border: 1.5px solid var(--border); border-radius: 10px;
+      font-size: 16px; color: var(--text); outline: none; font-family: inherit;
+    }
+    .shop-add-row input:focus { border-color: var(--accent); }
+    .shop-add-btn {
+      background: var(--accent); color: #0a0a0a; border: none;
+      border-radius: 10px; padding: 9px 16px; font-size: 14px;
+      font-weight: 700; cursor: pointer; flex-shrink: 0;
+    }
+    .shop-add-btn:active { opacity: 0.85; }
+    .shop-section-label {
+      font-size: 11px; font-weight: 700; color: var(--sub);
+      text-transform: uppercase; letter-spacing: 0.5px;
+      margin: 14px 0 8px;
+    }
+    .shop-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 11px 14px; border-radius: var(--radius);
+      background: var(--card); border: 1px solid var(--border);
+      margin-bottom: 8px; transition: opacity 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .shop-item.checked { opacity: 0.38; }
+    .shop-check {
+      width: 22px; height: 22px; border-radius: 50%;
+      border: 2px solid var(--border); display: flex;
+      align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; flex-shrink: 0; color: var(--accent);
+      cursor: pointer; flex-shrink: 0;
+    }
+    .shop-item.checked .shop-check {
+      background: var(--accent); border-color: var(--accent); color: #0a0a0a;
+    }
+    .shop-item-body { flex: 1; min-width: 0; cursor: pointer; }
+    .shop-item-name { font-size: 14px; font-weight: 600; }
+    .shop-item-meals { font-size: 12px; color: var(--sub); margin-top: 2px; }
+    .shop-del-btn {
+      background: none; border: none; color: var(--sub); font-size: 18px;
+      cursor: pointer; padding: 4px; line-height: 1; flex-shrink: 0;
+    }
+    .shop-del-btn:active { color: #f87171; }
+
+    /* MODAL */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 200;
+      align-items: flex-end;
+      justify-content: center;
+    }
+
+    .modal-backdrop.open { display: flex; }
+
+    .modal {
+      background: var(--modal-bg);
+      border-radius: 20px 20px 0 0;
+      border-top: 1px solid var(--border);
+      padding: 20px 20px calc(20px + env(safe-area-inset-bottom));
+      width: 100%;
+      max-height: 90dvh;
+      overflow-y: auto;
+      animation: slideUp 0.25s ease;
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+
+    .modal-title {
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    .form-group {
+      margin-bottom: 14px;
+    }
+
+    .form-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--sub);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      font-size: 16px;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .form-input:focus { outline: none; border-color: var(--accent); }
+
+    .ingredient-input-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .ingredient-input-row .form-input { flex: 1; }
+
+    .add-ingredient-btn {
+      background: var(--penguin);
+      color: var(--penguin-belly);
+      border: none;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 20px;
+      line-height: 1;
+      cursor: pointer;
+    }
+
+    .ingredient-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .ingredient-chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 5px 10px 5px 12px;
+      font-size: 13px;
+    }
+
+    .chip-remove {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--sub);
+      font-size: 14px;
+      line-height: 1;
+      padding: 0;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .btn-primary {
+      flex: 1;
+      background: var(--penguin);
+      color: var(--penguin-belly);
+      border: none;
+      border-radius: 12px;
+      padding: 13px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .btn-secondary {
+      flex: 1;
+      background: var(--bg);
+      color: var(--text);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 13px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-primary:active { opacity: 0.85; }
+    .btn-secondary:active { background: var(--border); }
+
+    /* EMPTY STATE */
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--sub);
+    }
+
+    .empty-state .icon { font-size: 40px; margin-bottom: 10px; }
+    .empty-state p { font-size: 14px; }
+
+    /* TOAST */
+    .toast {
+      position: fixed;
+      bottom: calc(var(--tab-h) + env(safe-area-inset-bottom) + 12px);
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--accent);
+      color: #0a0a0a;
+      padding: 10px 18px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      opacity: 0;
+      transition: opacity 0.2s, transform 0.2s;
+      z-index: 300;
+      white-space: nowrap;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* SETTINGS */
+    .settings-row {
+      background: var(--card);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      padding: 14px;
+      margin-bottom: 10px;
+    }
+
+    .settings-row label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--sub);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    /* FEEDBACK */
+    .feedback-hero {
+      text-align: center;
+      padding: 28px 16px 20px;
+    }
+
+    .feedback-hero-title {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      line-height: 1.2;
+      color: var(--text);
+    }
+
+    .feedback-hot {
+      color: var(--accent);
+    }
+
+    .feedback-hero-sub {
+      font-size: 13px;
+      color: var(--sub);
+      margin-top: 6px;
+    }
+
+    .feedback-item {
+      background: var(--card);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      padding: 14px;
+      margin-bottom: 10px;
+    }
+
+    .feedback-item-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .feedback-item-date {
+      font-size: 11px;
+      color: var(--sub);
+    }
+
+    .feedback-item-text {
+      font-size: 14px;
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    /* LOGIN SCREEN */
+    #loginScreen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 1000;
+    }
+
+    #loginScreen.hidden {
+      display: none;
+    }
+
+    .login-container {
+      text-align: center;
+      max-width: 320px;
+    }
+
+    .login-title {
+      font-size: 36px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      letter-spacing: -0.5px;
+    }
+
+    .login-tagline {
+      font-size: 16px;
+      color: var(--sub);
+      margin-bottom: 32px;
+      letter-spacing: -0.2px;
+    }
+
+    .login-input {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text);
+      font-size: 16px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      text-align: center;
+      margin-bottom: 16px;
+      font-family: inherit;
+    }
+
+    .login-input::placeholder {
+      color: var(--sub);
+      letter-spacing: 0;
+    }
+
+    .login-button {
+      width: 100%;
+      padding: 14px 20px;
+      border-radius: 12px;
+      border: none;
+      background: var(--accent);
+      color: var(--penguin-belly);
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: -0.3px;
+    }
+
+    .login-button:active {
+      opacity: 0.85;
+    }
+
+    .login-help {
+      font-size: 12px;
+      color: var(--sub);
+      margin-top: 24px;
+      letter-spacing: -0.2px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen">
+  <div class="login-container">
+    <div class="login-title">Meals 🍽️</div>
+    <div class="login-tagline">Enter your couple code to get started</div>
+    <input class="login-input" id="coupleCodeInput" type="text" placeholder="Your code here" maxlength="12" onkeydown="if(event.key==='Enter'){submitCoupleCode()}" />
+    <button class="login-button" onclick="submitCoupleCode()">Let's eat →</button>
+    <div class="login-help">Need a code? Ask Alex.</div>
+  </div>
+</div>
+
+<header>
+  <h1>🐧🦓 Meals</h1>
+  <div style="display:flex;align-items:center;gap:4px;">
+    <div class="week-nav" id="weekNav">
+      <button onclick="changeWeek(-1)">‹</button>
+      <span class="week-label" id="weekLabel"></span>
+      <button onclick="changeWeek(1)">›</button>
+    </div>
+    <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">☀️</button>
+    <button class="theme-toggle" title="Change code" onclick="logoutCouple()" style="font-size:14px;padding:6px 10px;">↻</button>
+  </div>
+</header>
+
+<!-- PLANNER VIEW -->
+<div class="view active" id="view-planner">
+  <div id="plannerDays"></div>
+</div>
+
+<!-- MEALS VIEW -->
+<div class="view" id="view-meals">
+  <div class="section-header">
+    <span class="section-title">Meals Library</span>
+    <button class="add-btn" onclick="openMealModal()">+ Add meal</button>
+  </div>
+  <div id="mealsList"></div>
+</div>
+
+<!-- SHOP VIEW -->
+<div class="view" id="view-shop">
+  <div id="shopContent">
+  </div>
+</div>
+
+<!-- FEEDBACK VIEW -->
+<div class="view" id="view-feedback">
+  <div class="feedback-hero">
+    <div class="feedback-hero-title">Feedback for the<br><span class="feedback-hot">(hot)</span> developer</div>
+    <div class="feedback-hero-sub">Alex reads every word. Probably.</div>
+  </div>
+
+  <div class="day-card" style="margin-bottom:16px;">
+    <div style="padding:14px;">
+      <div class="form-group" style="margin-bottom:10px;">
+        <label class="form-label">From</label>
+        <div class="cook-row">
+          <div class="cook-pill" id="fb-pill-alex" onclick="selectFbAuthor('alex')">🐧 Alex</div>
+          <div class="cook-pill" id="fb-pill-partner" onclick="selectFbAuthor('partner')">🦓 Lauren</div>
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:10px;">
+        <label class="form-label">Your feedback</label>
+        <textarea class="form-input" id="feedbackInput" placeholder="Tell the developer what you think..." rows="4" style="resize:vertical;font-family:inherit;"></textarea>
+      </div>
+      <button class="btn-primary" style="width:100%;" onclick="submitFeedback()">Submit feedback</button>
+    </div>
+  </div>
+
+  <div id="feedbackList"></div>
+</div>
+
+<!-- BOTTOM NAV -->
+<nav>
+  <button class="active" id="tab-planner" onclick="switchTab('planner')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    Planner
+  </button>
+  <button id="tab-meals" onclick="switchTab('meals')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><path d="M8 12h8M12 8v8"/></svg>
+    Meals
+  </button>
+  <button id="tab-shop" onclick="switchTab('shop')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+    Shop
+  </button>
+  <button id="tab-feedback" onclick="switchTab('feedback')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    Feedback
+  </button>
+</nav>
+
+<!-- MEAL MODAL -->
+<div class="modal-backdrop" id="mealModal">
+  <div class="modal">
+    <div class="modal-title" id="modalTitle">Add Meal</div>
+    <div class="form-group">
+      <label class="form-label">Meal name</label>
+      <input class="form-input" id="mealNameInput" placeholder="e.g. Pasta Carbonara" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Source</label>
+      <input class="form-input" id="mealSourceInput" placeholder="e.g. BBC Good Food, https://..." />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Ingredients</label>
+      <div class="ingredient-input-row">
+        <input class="form-input" id="ingredientInput" placeholder="Add an ingredient..." onkeydown="if(event.key==='Enter'){addIngredientChip();}" />
+        <button class="add-ingredient-btn" onclick="addIngredientChip()">+</button>
+      </div>
+      <div class="ingredient-chips" id="ingredientChips"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Notes</label>
+      <textarea class="form-input" id="mealNotesInput" placeholder="Any tips, variations, etc." rows="3" style="resize:vertical;font-family:inherit;"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeMealModal()">Cancel</button>
+      <button class="btn-primary" onclick="saveMeal()">Save meal</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- FIREBASE -->
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────────────────────────
+const NAMES = { alex: '🐧 Alex', partner: '🦓 Lauren' };
+
+const firebaseConfig = {
+  apiKey:            "AIzaSyDhj3duFKrYdZzOAg5bSJryGfgX1kJcUZE",
+  authDomain:        "meals-app-59b5d.firebaseapp.com",
+  projectId:         "meals-app-59b5d",
+  storageBucket:     "meals-app-59b5d.firebasestorage.app",
+  messagingSenderId: "729808455983",
+  appId:             "1:729808455983:web:38a9ab7a2f4eca430fb9da"
+};
+// ────────────────────────────────────────────────────────────────────────
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// ── COUPLE CODE ─────────────────────────────────────────────────────────────
+let coupleCode = null;
+
+function initCoupleCode() {
+  const stored = localStorage.getItem('coupleCode');
+  if (stored) {
+    coupleCode = stored;
+    showApp();
+  } else {
+    showLogin();
+  }
+}
+
+function showLogin() {
+  coupleCode = null;
+  document.getElementById('loginScreen').classList.remove('hidden');
+  document.getElementById('coupleCodeInput').value = '';
+  document.getElementById('coupleCodeInput').focus();
+}
+
+function showApp() {
+  document.getElementById('loginScreen').classList.add('hidden');
+}
+
+function submitCoupleCode() {
+  const code = document.getElementById('coupleCodeInput').value.trim().toUpperCase();
+  if (!code) {
+    alert('Please enter a code');
+    return;
+  }
+  coupleCode = code;
+  localStorage.setItem('coupleCode', code);
+  showApp();
+  loadMeals();
+  loadWeek();
+}
+
+function logoutCouple() {
+  if (confirm('Change couple code?')) {
+    localStorage.removeItem('coupleCode');
+    showLogin();
+  }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+
+const DAYS = ['mon','tue','wed','thu','fri','sat','sun'];
+const DAY_NAMES = { mon:'Monday', tue:'Tuesday', wed:'Wednesday', thu:'Thursday', fri:'Friday', sat:'Saturday', sun:'Sunday' };
+
+let currentWeekStart = getMonday(new Date());
+let mealsCache = {};       // mealId -> meal object
+let plannerCache = {};     // day -> { mealId, mealName, cook, outAlex, outPartner }
+let editingMealId = null;
+let modalIngredients = [];
+let expandedIngredients = {};  // day -> bool
+let expandedMeals = {};        // mealId -> bool
+let shopChecked = {};          // ingredient -> bool
+let shopWeekKey = null;        // week key when shopChecked was last reset
+let _shopIngredients = [];     // current shop list (for toggleShopItem index)
+
+// ── WEEK HELPERS ─────────────────────────────────────────────────────────
+function getMonday(d) {
+  const date = new Date(d);
+  const day = date.getDay();
+  const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+  date.setDate(diff);
+  date.setHours(0,0,0,0);
+  return date;
+}
+
+function weekKey(d) {
+  const y = d.getFullYear();
+  const start = getMonday(new Date(y, 0, 1));
+  const weekNum = Math.ceil(((d - start) / 86400000 + start.getDay() + 1) / 7);
+  return `${y}-W${String(weekNum).padStart(2,'0')}`;
+}
+
+function dayDate(weekStart, dayIdx) {
+  const d = new Date(weekStart);
+  d.setDate(d.getDate() + dayIdx);
+  return d;
+}
+
+function formatShortDate(d) {
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+}
+
+function isToday(d) {
+  const t = new Date();
+  return d.getDate() === t.getDate() && d.getMonth() === t.getMonth() && d.getFullYear() === t.getFullYear();
+}
+
+function changeWeek(delta) {
+  currentWeekStart.setDate(currentWeekStart.getDate() + delta * 7);
+  loadWeek();
+}
+
+function updateWeekLabel() {
+  const end = new Date(currentWeekStart);
+  end.setDate(end.getDate() + 6);
+  const s = currentWeekStart.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  const e = end.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  document.getElementById('weekLabel').textContent = `${s} – ${e}`;
+}
+
+// ── TAB SWITCHING ─────────────────────────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('view-' + tab).classList.add('active');
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.getElementById('weekNav').style.display = (tab === 'planner' || tab === 'shop') ? 'flex' : 'none';
+  if (tab === 'meals') renderMeals();
+  if (tab === 'shop') loadShopItems();
+  if (tab === 'feedback') loadFeedback();
+}
+
+// ── FIRESTORE LISTENERS ───────────────────────────────────────────────────
+let unsubPlanner = null;
+
+function loadWeek() {
+  updateWeekLabel();
+  const wk = weekKey(currentWeekStart);
+  if (unsubPlanner) unsubPlanner();
+
+  unsubPlanner = db.collection('couples').doc(coupleCode).collection('planner').doc(wk).onSnapshot(snap => {
+    plannerCache = snap.exists ? snap.data() : {};
+    renderPlanner();
+    if (document.getElementById('view-shop').classList.contains('active')) loadShopItems();
+  });
+}
+
+function loadMeals(cb) {
+  let firstLoad = true;
+  db.collection('couples').doc(coupleCode).collection('meals').orderBy('name').onSnapshot(snap => {
+    mealsCache = {};
+    snap.forEach(doc => mealsCache[doc.id] = { id: doc.id, ...doc.data() });
+    if (firstLoad && cb) { firstLoad = false; cb(); }
+    renderMeals();
+    renderPlanner();
+  });
+}
+
+// ── PLANNER RENDER ────────────────────────────────────────────────────────
+function renderPlanner() {
+  const container = document.getElementById('plannerDays');
+  container.innerHTML = '';
+
+  DAYS.forEach((day, idx) => {
+    const date = dayDate(currentWeekStart, idx);
+    const entry = plannerCache[day] || {};
+    const meal = entry.mealId ? mealsCache[entry.mealId] : null;
+    const ingredients = meal ? (meal.ingredients || []) : [];
+    const showIngredients = expandedIngredients[day] && ingredients.length > 0;
+
+    const card = document.createElement('div');
+    card.className = 'day-card';
+    const cookLabel = entry.cook === 'alex' ? `${NAMES.alex} is cooking`
+      : entry.cook === 'partner' ? `${NAMES.partner} is cooking`
+      : entry.cook === 'together' ? 'Cooking together'
+      : '';
+    const cookBadgeClass = entry.cook === 'alex' ? 'alex'
+      : entry.cook === 'partner' ? 'partner'
+      : entry.cook === 'together' ? 'together'
+      : '';
+
+    card.innerHTML = `
+      <div class="day-header">
+        <div>
+          <span class="day-name${isToday(date) ? ' today' : ''}">${DAY_NAMES[day]}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          ${entry.mealId && entry.cook ? `<span class="cook-badge ${cookBadgeClass}">${cookLabel}</span>` : ''}
+          <span class="day-date">${formatShortDate(date)}</span>
+        </div>
+      </div>
+      <div class="day-body">
+        <div class="meal-select-row">
+          <select class="meal-picker" onchange="setMeal('${day}', this.value)">
+            <option value="">— No meal planned —</option>
+            ${buildMealOptions(entry.mealId)}
+          </select>
+          ${entry.mealId ? `<button class="clear-btn" onclick="clearDay('${day}')">×</button>` : ''}
+        </div>
+        ${entry.mealId ? `
+          <div class="cook-row">
+            <div class="cook-pill ${entry.cook === 'alex' ? 'active-alex' : ''}" onclick="setCook('${day}', 'alex')">${NAMES.alex}</div>
+            <div class="cook-pill ${entry.cook === 'partner' ? 'active-partner' : ''}" onclick="setCook('${day}', 'partner')">${NAMES.partner}</div>
+            <div class="cook-pill ${entry.cook === 'together' ? 'active-together' : ''}" onclick="setCook('${day}', 'together')">Together</div>
+          </div>
+          ${ingredients.length > 0 ? `
+            <div class="ingredients-toggle" onclick="toggleIngredients('${day}')">
+              ${showIngredients ? '▾ Hide ingredients' : '▸ Show ingredients'} (${ingredients.length})
+            </div>
+            <div class="ingredients-list ${showIngredients ? '' : 'hidden'}">
+              ${ingredients.join(' · ')}
+            </div>
+          ` : ''}
+        ` : `<div class="no-meal">Nothing planned yet</div>`}
+        <div class="day-note-row">
+          <input class="day-note-input" type="text" placeholder="Notes for this day..."
+            value="${(entry.note || '').replace(/"/g, '&quot;')}"
+            oninput="onNoteInput('${day}', this.value)">
+        </div>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function toggleIngredients(day) {
+  expandedIngredients[day] = !expandedIngredients[day];
+  renderPlanner();
+}
+
+async function setMeal(day, mealId) {
+  const wk = weekKey(currentWeekStart);
+  const existing = plannerCache[day] || {};
+  const meal = mealsCache[mealId];
+  const noteField = existing.note ? { note: existing.note } : {};
+  const update = {
+    [day]: mealId
+      ? { mealId, mealName: meal.name, cook: existing.cook || '', ...noteField }
+      : (existing.note ? { note: existing.note } : firebase.firestore.FieldValue.delete())
+  };
+  await db.collection('couples').doc(coupleCode).collection('planner').doc(wk).set(update, { merge: true });
+}
+
+async function clearDay(day) {
+  const wk = weekKey(currentWeekStart);
+  expandedIngredients[day] = false;
+  const existing = plannerCache[day] || {};
+  await db.collection('couples').doc(coupleCode).collection('planner').doc(wk).set(
+    { [day]: existing.note ? { note: existing.note } : firebase.firestore.FieldValue.delete() },
+    { merge: true }
+  );
+}
+
+async function setCook(day, cook) {
+  const wk = weekKey(currentWeekStart);
+  const entry = plannerCache[day] || {};
+  if (!entry.mealId) return;
+  await db.collection('couples').doc(coupleCode).collection('planner').doc(wk).set(
+    { [day]: { ...entry, cook } },
+    { merge: true }
+  );
+}
+
+// ── MEALS RENDER ──────────────────────────────────────────────────────────
+function getMealWeekKey(meal) {
+  if (!meal.createdAt) return 'unknown';
+  const d = meal.createdAt.toDate ? meal.createdAt.toDate() : new Date(meal.createdAt);
+  if (d.getDay() === 0) d.setDate(d.getDate() + 1); // Sunday → treat as next week
+  return weekKey(getMonday(d));
+}
+
+function formatWeekLabel(wk) {
+  // Parse "2026-W13" into a readable date range
+  const parts = wk.match(/^(\d{4})-W(\d{2})$/);
+  if (!parts) return wk;
+  const year = parseInt(parts[1]);
+  const week = parseInt(parts[2]);
+  // Approximate: Jan 1 + (week-1)*7 days, find that Monday
+  const jan1 = new Date(year, 0, 1);
+  const dayOfWeek = jan1.getDay();
+  const firstMonday = new Date(year, 0, 1 + ((8 - dayOfWeek) % 7));
+  const weekStart = new Date(firstMonday);
+  weekStart.setDate(weekStart.getDate() + (week - 2) * 7);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekEnd.getDate() + 6);
+  const s = weekStart.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  const e = weekEnd.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  return `${s} – ${e}`;
+}
+
+function buildMealOptions(selectedId) {
+  const currentWk = weekKey(currentWeekStart);
+  const thisWeek = [];
+  const earlier = [];
+  Object.values(mealsCache).sort((a,b) => a.name.localeCompare(b.name)).forEach(m => {
+    if (getMealWeekKey(m) === currentWk) thisWeek.push(m);
+    else earlier.push(m);
+  });
+  let html = '';
+  if (thisWeek.length > 0) {
+    html += `<optgroup label="Added this week">`;
+    thisWeek.forEach(m => { html += `<option value="${m.id}" ${selectedId === m.id ? 'selected' : ''}>${m.name}</option>`; });
+    html += `</optgroup>`;
+  }
+  if (earlier.length > 0) {
+    html += `<optgroup label="Previous weeks">`;
+    earlier.forEach(m => { html += `<option value="${m.id}" ${selectedId === m.id ? 'selected' : ''}>${m.name}</option>`; });
+    html += `</optgroup>`;
+  }
+  return html;
+}
+
+function renderMealCard(meal) {
+  const expanded = expandedMeals[meal.id];
+  const ratingAlex = meal.ratingAlex || meal.rating || 0;
+  const ratingLauren = meal.ratingLauren || 0;
+  const avgRating = (ratingAlex || ratingLauren) ? Math.round(((ratingAlex || 0) + (ratingLauren || 0)) / ((ratingAlex ? 1 : 0) + (ratingLauren ? 1 : 0))) : 0;
+  const avgStars = avgRating > 0 ? '★'.repeat(avgRating) + '☆'.repeat(5 - avgRating) : '';
+
+  const sourceHtml = meal.source
+    ? (meal.source.startsWith('http')
+      ? `<div class="meal-source"><a href="${meal.source}" target="_blank" onclick="event.stopPropagation()">${meal.source}</a></div>`
+      : `<div class="meal-source">${meal.source}</div>`)
+    : '';
+
+  const card = document.createElement('div');
+  card.className = 'meal-card';
+  card.innerHTML = `
+    <div class="meal-card-header" onclick="toggleMeal('${meal.id}')">
+      <div style="min-width:0;flex:1;">
+        <div class="meal-card-name">${meal.name}</div>
+        <div class="meal-card-meta">
+          ${(meal.ingredients || []).length} ingredient${(meal.ingredients||[]).length !== 1 ? 's' : ''}
+          ${avgStars ? ` · <span class="rating-display">${avgStars}</span>` : ''}
+        </div>
+        ${sourceHtml}
+      </div>
+      <div class="meal-card-actions">
+        <button class="icon-btn" onclick="event.stopPropagation(); openMealModal('${meal.id}')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="icon-btn del" onclick="event.stopPropagation(); deleteMeal('${meal.id}')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="meal-card-body ${expanded ? 'open' : ''}">
+      ${(meal.ingredients || []).length > 0
+        ? (meal.ingredients || []).map(i => `<span class="ingredient-tag">${i}</span>`).join('')
+        : '<span style="font-size:13px;color:var(--sub)">No ingredients listed</span>'
+      }
+      ${meal.notes ? `<div class="meal-notes">${meal.notes}</div>` : ''}
+      <div class="dual-rating">
+        <div class="rating-row">
+          <span class="rating-label">${NAMES.alex}</span>
+          <div class="star-rating">
+            ${[1,2,3,4,5].map(s => `<button class="star ${s <= ratingAlex ? 'filled' : ''}" onclick="event.stopPropagation(); rateMeal('${meal.id}', ${s}, 'alex')">★</button>`).join('')}
+          </div>
+        </div>
+        <div class="rating-row">
+          <span class="rating-label">${NAMES.partner}</span>
+          <div class="star-rating">
+            ${[1,2,3,4,5].map(s => `<button class="star ${s <= ratingLauren ? 'filled' : ''}" onclick="event.stopPropagation(); rateMeal('${meal.id}', ${s}, 'lauren')">★</button>`).join('')}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  return card;
+}
+
+function renderMeals() {
+  const container = document.getElementById('mealsList');
+  const meals = Object.values(mealsCache);
+
+  if (meals.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="icon">🥘</div>
+        <p>No meals yet. Add your first one!</p>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = '';
+
+  // Group meals by week
+  const currentWk = weekKey(getMonday(new Date()));
+  const groups = {};
+  meals.forEach(meal => {
+    const wk = getMealWeekKey(meal);
+    if (!groups[wk]) groups[wk] = [];
+    groups[wk].push(meal);
+  });
+
+  // Sort weeks: current week first, then most recent
+  const sortedWeeks = Object.keys(groups).sort((a, b) => {
+    if (a === currentWk) return -1;
+    if (b === currentWk) return 1;
+    return b.localeCompare(a);
+  });
+
+  sortedWeeks.forEach(wk => {
+    const header = document.createElement('div');
+    header.className = 'week-group-header';
+    header.textContent = wk === currentWk ? 'This Week' : formatWeekLabel(wk);
+    container.appendChild(header);
+
+    groups[wk].sort((a,b) => a.name.localeCompare(b.name)).forEach(meal => {
+      container.appendChild(renderMealCard(meal));
+    });
+  });
+}
+
+function toggleMeal(id) {
+  expandedMeals[id] = !expandedMeals[id];
+  renderMeals();
+}
+
+async function deleteMeal(id) {
+  if (!confirm('Delete this meal?')) return;
+  await db.collection('couples').doc(coupleCode).collection('meals').doc(id).delete();
+  showToast('Meal deleted');
+}
+
+async function rateMeal(id, stars, who) {
+  const field = who === 'lauren' ? 'ratingLauren' : 'ratingAlex';
+  const current = mealsCache[id]?.[field] || (who === 'alex' ? mealsCache[id]?.rating : 0) || 0;
+  const newRating = current === stars ? 0 : stars;
+  await db.collection('couples').doc(coupleCode).collection('meals').doc(id).update({ [field]: newRating });
+  const name = who === 'lauren' ? NAMES.partner : NAMES.alex;
+  showToast(newRating ? `${name}: ${newRating} star${newRating > 1 ? 's' : ''}` : `${name}: rating cleared`);
+}
+
+// ── MEAL MODAL ────────────────────────────────────────────────────────────
+function openMealModal(mealId) {
+  editingMealId = mealId || null;
+  modalIngredients = [];
+  document.getElementById('mealNameInput').value = '';
+  document.getElementById('mealSourceInput').value = '';
+  document.getElementById('mealNotesInput').value = '';
+  document.getElementById('ingredientInput').value = '';
+  document.getElementById('ingredientChips').innerHTML = '';
+
+  if (mealId && mealsCache[mealId]) {
+    const meal = mealsCache[mealId];
+    document.getElementById('mealNameInput').value = meal.name;
+    document.getElementById('mealSourceInput').value = meal.source || '';
+    document.getElementById('mealNotesInput').value = meal.notes || '';
+    document.getElementById('modalTitle').textContent = 'Edit Meal';
+    modalIngredients = [...(meal.ingredients || [])];
+    renderChips();
+  } else {
+    document.getElementById('modalTitle').textContent = 'Add Meal';
+  }
+
+  document.getElementById('mealModal').classList.add('open');
+  setTimeout(() => document.getElementById('mealNameInput').focus(), 300);
+}
+
+function closeMealModal() {
+  document.getElementById('mealModal').classList.remove('open');
+  editingMealId = null;
+  modalIngredients = [];
+}
+
+function addIngredientChip() {
+  const input = document.getElementById('ingredientInput');
+  const val = input.value.trim();
+  if (!val) return;
+  if (!modalIngredients.includes(val)) {
+    modalIngredients.push(val);
+    renderChips();
+  }
+  input.value = '';
+  input.focus();
+}
+
+function removeChip(idx) {
+  modalIngredients.splice(idx, 1);
+  renderChips();
+}
+
+function renderChips() {
+  document.getElementById('ingredientChips').innerHTML = modalIngredients.map((i, idx) => `
+    <div class="ingredient-chip">
+      ${i}
+      <button class="chip-remove" onclick="removeChip(${idx})">×</button>
+    </div>
+  `).join('');
+}
+
+async function saveMeal() {
+  const name = document.getElementById('mealNameInput').value.trim();
+  if (!name) { showToast('Please enter a meal name'); return; }
+
+  const source = document.getElementById('mealSourceInput').value.trim();
+  const notes = document.getElementById('mealNotesInput').value.trim();
+  const data = { name, source, notes, ingredients: modalIngredients, updatedAt: new Date() };
+
+  if (editingMealId) {
+    await db.collection('couples').doc(coupleCode).collection('meals').doc(editingMealId).update(data);
+    showToast('Meal updated');
+  } else {
+    data.createdAt = new Date();
+    data.ratingAlex = 0;
+    data.ratingLauren = 0;
+    await db.collection('couples').doc(coupleCode).collection('meals').add(data);
+    showToast('Meal added');
+  }
+
+  closeMealModal();
+}
+
+// ── DAY NOTES ─────────────────────────────────────────────────────────────
+const _noteTimers = {};
+function onNoteInput(day, val) {
+  clearTimeout(_noteTimers[day]);
+  _noteTimers[day] = setTimeout(() => saveNote(day, val), 700);
+}
+async function saveNote(day, val) {
+  const wk = weekKey(currentWeekStart);
+  const entry = plannerCache[day] || {};
+  await db.collection('couples').doc(coupleCode).collection('planner').doc(wk).set(
+    { [day]: { ...entry, note: val || firebase.firestore.FieldValue.delete() } },
+    { merge: true }
+  );
+}
+
+// ── SHOP ──────────────────────────────────────────────────────────────────
+let shopCustomItems = [];   // string[] loaded from Firestore for current week
+let unsubShop = null;
+
+function loadShopItems() {
+  const wk = weekKey(currentWeekStart);
+  if (shopWeekKey !== wk) { shopChecked = {}; shopWeekKey = wk; }
+  if (unsubShop) unsubShop();
+  unsubShop = db.collection('couples').doc(coupleCode).collection('shop').doc(wk).onSnapshot(snap => {
+    shopCustomItems = snap.exists ? (snap.data().items || []) : [];
+    renderShop();
+  });
+}
+
+async function addShopItem() {
+  const input = document.getElementById('shopAddInput');
+  const val = input.value.trim();
+  if (!val) return;
+  const wk = weekKey(currentWeekStart);
+  const updated = [...shopCustomItems, val];
+  await db.collection('couples').doc(coupleCode).collection('shop').doc(wk).set({ items: updated });
+  input.value = '';
+  input.focus();
+}
+
+async function removeShopItem(idx) {
+  const wk = weekKey(currentWeekStart);
+  const updated = shopCustomItems.filter((_, i) => i !== idx);
+  await db.collection('couples').doc(coupleCode).collection('shop').doc(wk).set({ items: updated });
+}
+
+function renderShop() {
+  const container = document.getElementById('shopContent');
+
+  // Collect meal-sourced ingredients
+  const ingMap = {}; // ingredient -> [label strings]
+  DAYS.forEach(day => {
+    const entry = plannerCache[day];
+    if (!entry?.mealId) return;
+    const meal = mealsCache[entry.mealId];
+    if (!meal?.ingredients?.length) return;
+    meal.ingredients.forEach(ing => {
+      if (!ingMap[ing]) ingMap[ing] = [];
+      ingMap[ing].push(`${DAY_NAMES[day].slice(0, 3)}: ${meal.name}`);
+    });
+  });
+  const mealIngredients = Object.keys(ingMap).sort((a, b) => a.localeCompare(b));
+
+  // Build master index for checked-state toggling
+  _shopIngredients = [
+    ...shopCustomItems.map(i => '__custom__' + i),
+    ...mealIngredients
+  ];
+
+  const totalCount = shopCustomItems.length + mealIngredients.length;
+  const doneCount = _shopIngredients.filter(k => shopChecked[k]).length;
+
+  let html = `
+    <div class="shop-header">
+      <span style="font-size:16px;font-weight:700;">Shopping list</span>
+      <span style="font-size:13px;color:var(--sub);">${totalCount > 0 ? `${doneCount}/${totalCount} got` : ''}</span>
+    </div>
+    <div class="shop-add-row">
+      <input id="shopAddInput" type="text" placeholder="Add item..."
+        onkeydown="if(event.key==='Enter') addShopItem()">
+      <button class="shop-add-btn" onclick="addShopItem()">+ Add</button>
+    </div>`;
+
+  if (shopCustomItems.length > 0) {
+    html += `<div class="shop-section-label">Added</div>`;
+    shopCustomItems.forEach((ing, i) => {
+      const key = '__custom__' + ing;
+      const checked = shopChecked[key] || false;
+      html += `
+        <div class="shop-item${checked ? ' checked' : ''}">
+          <div class="shop-check" onclick="toggleShopItem(${i})">${checked ? '✓' : ''}</div>
+          <div class="shop-item-body" onclick="toggleShopItem(${i})">
+            <div class="shop-item-name">${ing}</div>
+          </div>
+          <button class="shop-del-btn" onclick="removeShopItem(${i})">×</button>
+        </div>`;
+    });
+  }
+
+  if (mealIngredients.length > 0) {
+    html += `<div class="shop-section-label">From meals</div>`;
+    mealIngredients.forEach((ing, i) => {
+      const key = ing;
+      const idx = shopCustomItems.length + i;
+      const checked = shopChecked[key] || false;
+      html += `
+        <div class="shop-item${checked ? ' checked' : ''}" onclick="toggleShopItem(${idx})">
+          <div class="shop-check">${checked ? '✓' : ''}</div>
+          <div class="shop-item-body">
+            <div class="shop-item-name">${ing}</div>
+            <div class="shop-item-meals">${ingMap[ing].join(', ')}</div>
+          </div>
+        </div>`;
+    });
+  }
+
+  if (totalCount === 0) {
+    html += `<div class="empty-state"><div class="icon">🛒</div><p>Add items above or plan some meals.</p></div>`;
+  }
+
+  container.innerHTML = html;
+}
+
+function toggleShopItem(idx) {
+  const key = _shopIngredients[idx];
+  if (!key) return;
+  shopChecked[key] = !shopChecked[key];
+  renderShop();
+}
+
+// ── FEEDBACK ─────────────────────────────────────────────────────────────
+let fbAuthor = null;
+
+function selectFbAuthor(who) {
+  fbAuthor = who;
+  document.getElementById('fb-pill-alex').className = 'cook-pill' + (who === 'alex' ? ' active-alex' : '');
+  document.getElementById('fb-pill-partner').className = 'cook-pill' + (who === 'partner' ? ' active-partner' : '');
+
+}
+
+async function submitFeedback() {
+  const text = document.getElementById('feedbackInput').value.trim();
+  if (!text) { showToast('Write something first'); return; }
+  if (!fbAuthor) { showToast('Select who you are first'); return; }
+  await db.collection('couples').doc(coupleCode).collection('feedback').add({ text, from: fbAuthor, createdAt: new Date() });
+  document.getElementById('feedbackInput').value = '';
+  showToast('Feedback sent!');
+  loadFeedback();
+}
+
+function loadFeedback() {
+  db.collection('couples').doc(coupleCode).collection('feedback').orderBy('createdAt', 'desc').get().then(snap => {
+    const container = document.getElementById('feedbackList');
+    if (snap.empty) {
+      container.innerHTML = '<div class="empty-state"><p>No feedback yet. Be the first.</p></div>';
+      return;
+    }
+    container.innerHTML = '';
+    snap.forEach(doc => {
+      const d = doc.data();
+      const date = d.createdAt?.toDate ? d.createdAt.toDate() : new Date(d.createdAt);
+      const dateStr = date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+      const name = d.from === 'alex' ? NAMES.alex : NAMES.partner;
+      const badgeClass = d.from === 'alex' ? 'alex' : 'partner';
+      const el = document.createElement('div');
+      el.className = 'feedback-item';
+      el.innerHTML = `
+        <div class="feedback-item-header">
+          <span class="cook-badge ${badgeClass}">${name}</span>
+          <span class="feedback-item-date">${dateStr}</span>
+        </div>
+        <div class="feedback-item-text">${d.text}</div>
+      `;
+      container.appendChild(el);
+    });
+  });
+}
+
+// ── TOAST ─────────────────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+// Close modal on backdrop click
+document.getElementById('mealModal').addEventListener('click', function(e) {
+  if (e.target === this) closeMealModal();
+});
+
+// ── THEME ─────────────────────────────────────────────────────────────────
+function toggleTheme() {
+  const isLight = document.body.classList.toggle('light');
+  localStorage.setItem('mealsTheme', isLight ? 'light' : 'dark');
+  document.getElementById('themeToggle').textContent = isLight ? '🌙' : '☀️';
+}
+
+(function applySavedTheme() {
+  if (localStorage.getItem('mealsTheme') === 'light') {
+    document.body.classList.add('light');
+    document.getElementById('themeToggle').textContent = '🌙';
+  }
+})();
+
+// Initialize with couple code check
+initCoupleCode();
+</script>
+</body>
+</html>
