@@ -710,55 +710,36 @@
       margin-bottom: 6px;
     }
 
-    /* FEEDBACK */
-    .feedback-hero {
-      text-align: center;
-      padding: 28px 16px 20px;
-    }
-
-    .feedback-hero-title {
-      font-size: 26px;
-      font-weight: 800;
-      letter-spacing: -0.5px;
-      line-height: 1.2;
-      color: var(--text);
-    }
-
-    .feedback-hot {
-      color: var(--accent);
-    }
-
-    .feedback-hero-sub {
+    /* SETTINGS */
+    .settings-section-title {
       font-size: 13px;
+      font-weight: 700;
       color: var(--sub);
-      margin-top: 6px;
-    }
-
-    .feedback-item {
-      background: var(--card);
-      border-radius: var(--radius);
-      border: 1px solid var(--border);
-      padding: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
       margin-bottom: 10px;
     }
 
-    .feedback-item-header {
+    .settings-person-row {
       display: flex;
+      gap: 8px;
       align-items: center;
-      justify-content: space-between;
-      margin-bottom: 8px;
+      margin-bottom: 10px;
     }
 
-    .feedback-item-date {
-      font-size: 11px;
-      color: var(--sub);
-    }
-
-    .feedback-item-text {
-      font-size: 14px;
+    .settings-emoji-input {
+      width: 52px;
+      text-align: center;
+      font-size: 22px;
+      padding: 8px 4px;
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
       color: var(--text);
-      line-height: 1.5;
+      flex-shrink: 0;
     }
+
+    .settings-emoji-input:focus { outline: none; border-color: var(--accent); }
 
     /* LOGIN SCREEN */
     #loginScreen {
@@ -859,7 +840,7 @@
 </div>
 
 <header>
-  <h1>🐧🦓 Meals</h1>
+  <h1 id="appTitle">Meals</h1>
   <div style="display:flex;align-items:center;gap:4px;">
     <div class="week-nav" id="weekNav">
       <button onclick="changeWeek(-1)">‹</button>
@@ -891,31 +872,30 @@
   </div>
 </div>
 
-<!-- FEEDBACK VIEW -->
-<div class="view" id="view-feedback">
-  <div class="feedback-hero">
-    <div class="feedback-hero-title">Feedback for the<br><span class="feedback-hot">(hot)</span> developer</div>
-    <div class="feedback-hero-sub">Alex reads every word. Probably.</div>
-  </div>
-
-  <div class="day-card" style="margin-bottom:16px;">
-    <div style="padding:14px;">
-      <div class="form-group" style="margin-bottom:10px;">
-        <label class="form-label">From</label>
-        <div class="cook-row">
-          <div class="cook-pill" id="fb-pill-alex" onclick="selectFbAuthor('alex')">🐧 Alex</div>
-          <div class="cook-pill" id="fb-pill-partner" onclick="selectFbAuthor('partner')">🦓 Lauren</div>
+<!-- SETTINGS VIEW -->
+<div class="view" id="view-settings">
+  <div style="padding-top:8px;">
+    <div class="settings-section-title">Your names and emojis</div>
+    <div class="day-card" style="margin-bottom:16px;">
+      <div style="padding:14px;">
+        <div class="form-group" style="margin-bottom:10px;">
+          <label class="form-label">Person 1</label>
+          <div class="settings-person-row">
+            <input class="settings-emoji-input" id="settings-emoji1" type="text" maxlength="2" placeholder="🐧">
+            <input class="form-input" id="settings-name1" type="text" placeholder="Name" style="flex:1;">
+          </div>
         </div>
+        <div class="form-group" style="margin-bottom:14px;">
+          <label class="form-label">Person 2</label>
+          <div class="settings-person-row">
+            <input class="settings-emoji-input" id="settings-emoji2" type="text" maxlength="2" placeholder="🦓">
+            <input class="form-input" id="settings-name2" type="text" placeholder="Name" style="flex:1;">
+          </div>
+        </div>
+        <button class="btn-primary" style="width:100%;" onclick="saveSettings()">Save</button>
       </div>
-      <div class="form-group" style="margin-bottom:10px;">
-        <label class="form-label">Your feedback</label>
-        <textarea class="form-input" id="feedbackInput" placeholder="Tell the developer what you think..." rows="4" style="resize:vertical;font-family:inherit;"></textarea>
-      </div>
-      <button class="btn-primary" style="width:100%;" onclick="submitFeedback()">Submit feedback</button>
     </div>
   </div>
-
-  <div id="feedbackList"></div>
 </div>
 
 <!-- BOTTOM NAV -->
@@ -932,9 +912,9 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
     Shop
   </button>
-  <button id="tab-feedback" onclick="switchTab('feedback')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-    Feedback
+  <button id="tab-settings" onclick="switchTab('settings')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    Settings
   </button>
 </nav>
 
@@ -977,7 +957,7 @@
 
 <script>
 // ── CONFIG ──────────────────────────────────────────────────────────────
-const NAMES = { alex: '🐧 Alex', partner: '🦓 Lauren' };
+let NAMES = { alex: '🐧 Person 1', partner: '🦓 Person 2' };
 
 const firebaseConfig = {
   apiKey:            "AIzaSyDhj3duFKrYdZzOAg5bSJryGfgX1kJcUZE",
@@ -1014,6 +994,7 @@ function showLogin() {
 
 function showApp() {
   document.getElementById('loginScreen').classList.add('hidden');
+  loadSettings();
 }
 
 function submitCoupleCode() {
@@ -1106,7 +1087,7 @@ function switchTab(tab) {
   document.getElementById('weekNav').style.display = (tab === 'planner' || tab === 'shop') ? 'flex' : 'none';
   if (tab === 'meals') renderMeals();
   if (tab === 'shop') loadShopItems();
-  if (tab === 'feedback') loadFeedback();
+  if (tab === 'settings') renderSettingsForm();
 }
 
 // ── FIRESTORE LISTENERS ───────────────────────────────────────────────────
@@ -1621,52 +1602,48 @@ function toggleShopItem(idx) {
   renderShop();
 }
 
-// ── FEEDBACK ─────────────────────────────────────────────────────────────
-let fbAuthor = null;
+// ── SETTINGS ─────────────────────────────────────────────────────────────
+let settingsCache = null;
 
-function selectFbAuthor(who) {
-  fbAuthor = who;
-  document.getElementById('fb-pill-alex').className = 'cook-pill' + (who === 'alex' ? ' active-alex' : '');
-  document.getElementById('fb-pill-partner').className = 'cook-pill' + (who === 'partner' ? ' active-partner' : '');
-
+function applySettings(data) {
+  const emoji1 = data.emoji1 || '🐧';
+  const name1  = data.name1  || 'Person 1';
+  const emoji2 = data.emoji2 || '🦓';
+  const name2  = data.name2  || 'Person 2';
+  NAMES.alex    = `${emoji1} ${name1}`;
+  NAMES.partner = `${emoji2} ${name2}`;
+  document.getElementById('appTitle').textContent = `${emoji1}${emoji2} Meals`;
+  renderPlanner();
+  renderMeals();
 }
 
-async function submitFeedback() {
-  const text = document.getElementById('feedbackInput').value.trim();
-  if (!text) { showToast('Write something first'); return; }
-  if (!fbAuthor) { showToast('Select who you are first'); return; }
-  await db.collection('couples').doc(coupleCode).collection('feedback').add({ text, from: fbAuthor, createdAt: new Date() });
-  document.getElementById('feedbackInput').value = '';
-  showToast('Feedback sent!');
-  loadFeedback();
-}
-
-function loadFeedback() {
-  db.collection('couples').doc(coupleCode).collection('feedback').orderBy('createdAt', 'desc').get().then(snap => {
-    const container = document.getElementById('feedbackList');
-    if (snap.empty) {
-      container.innerHTML = '<div class="empty-state"><p>No feedback yet. Be the first.</p></div>';
-      return;
-    }
-    container.innerHTML = '';
-    snap.forEach(doc => {
-      const d = doc.data();
-      const date = d.createdAt?.toDate ? d.createdAt.toDate() : new Date(d.createdAt);
-      const dateStr = date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-      const name = d.from === 'alex' ? NAMES.alex : NAMES.partner;
-      const badgeClass = d.from === 'alex' ? 'alex' : 'partner';
-      const el = document.createElement('div');
-      el.className = 'feedback-item';
-      el.innerHTML = `
-        <div class="feedback-item-header">
-          <span class="cook-badge ${badgeClass}">${name}</span>
-          <span class="feedback-item-date">${dateStr}</span>
-        </div>
-        <div class="feedback-item-text">${d.text}</div>
-      `;
-      container.appendChild(el);
-    });
+function loadSettings() {
+  db.collection('couples').doc(coupleCode).collection('settings').doc('prefs').get().then(snap => {
+    const data = snap.exists ? snap.data() : {};
+    settingsCache = data;
+    applySettings(data);
   });
+}
+
+function renderSettingsForm() {
+  const d = settingsCache || {};
+  document.getElementById('settings-emoji1').value = d.emoji1 || '';
+  document.getElementById('settings-name1').value  = d.name1  || '';
+  document.getElementById('settings-emoji2').value = d.emoji2 || '';
+  document.getElementById('settings-name2').value  = d.name2  || '';
+}
+
+async function saveSettings() {
+  const data = {
+    emoji1: document.getElementById('settings-emoji1').value.trim() || '🐧',
+    name1:  document.getElementById('settings-name1').value.trim()  || 'Person 1',
+    emoji2: document.getElementById('settings-emoji2').value.trim() || '🦓',
+    name2:  document.getElementById('settings-name2').value.trim()  || 'Person 2',
+  };
+  await db.collection('couples').doc(coupleCode).collection('settings').doc('prefs').set(data);
+  settingsCache = data;
+  applySettings(data);
+  showToast('Settings saved');
 }
 
 // ── TOAST ─────────────────────────────────────────────────────────────────
