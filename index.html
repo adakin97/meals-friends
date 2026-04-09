@@ -727,19 +727,53 @@
       margin-bottom: 10px;
     }
 
-    .settings-emoji-input {
+    .settings-emoji-btn {
       width: 52px;
+      height: 44px;
       text-align: center;
       font-size: 22px;
-      padding: 8px 4px;
+      padding: 0;
       background: var(--bg);
       border: 1.5px solid var(--border);
       border-radius: 10px;
-      color: var(--text);
+      cursor: pointer;
       flex-shrink: 0;
+      line-height: 1;
     }
 
-    .settings-emoji-input:focus { outline: none; border-color: var(--accent); }
+    .settings-emoji-btn:active { border-color: var(--accent); }
+
+    .emoji-picker-popup {
+      position: fixed;
+      background: var(--modal-bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px;
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+      z-index: 500;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      max-width: 300px;
+    }
+
+    .emoji-picker-popup button {
+      background: none;
+      border: none;
+      font-size: 22px;
+      cursor: pointer;
+      padding: 6px 4px;
+      border-radius: 8px;
+      line-height: 1;
+    }
+
+    .emoji-picker-popup button:active { background: var(--border); }
+
+    .emoji-picker-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 499;
+    }
 
     /* LOGIN SCREEN */
     #loginScreen {
@@ -881,14 +915,14 @@
         <div class="form-group" style="margin-bottom:10px;">
           <label class="form-label">Person 1</label>
           <div class="settings-person-row">
-            <input class="settings-emoji-input" id="settings-emoji1" type="text" maxlength="2" placeholder="🐧">
+            <button class="settings-emoji-btn" id="settings-emoji1-btn" onclick="openEmojiPicker(1)">🐧</button>
             <input class="form-input" id="settings-name1" type="text" placeholder="Name" style="flex:1;">
           </div>
         </div>
         <div class="form-group" style="margin-bottom:14px;">
           <label class="form-label">Person 2</label>
           <div class="settings-person-row">
-            <input class="settings-emoji-input" id="settings-emoji2" type="text" maxlength="2" placeholder="🦓">
+            <button class="settings-emoji-btn" id="settings-emoji2-btn" onclick="openEmojiPicker(2)">🦓</button>
             <input class="form-input" id="settings-name2" type="text" placeholder="Name" style="flex:1;">
           </div>
         </div>
@@ -1625,20 +1659,71 @@ function loadSettings() {
   });
 }
 
+const EMOJI_LIST = [
+  '🐧','🦓','🐻','🐼','🦊','🐺','🦁','🐯','🐸','🐨','🐙','🦋',
+  '🌸','🌻','🍀','⭐','🌙','☀️','❤️','💜','💚','💙','🔥','✨',
+  '🍕','🍜','🍣','🍔','🌮','🥑','🍓','🍋','🍩','🎉','🎸','⚽'
+];
+
+let emojiPickerTarget = null;
+
+function openEmojiPicker(person) {
+  closeEmojiPicker();
+  emojiPickerTarget = person;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'emoji-picker-overlay';
+  overlay.id = 'emojiOverlay';
+  overlay.onclick = closeEmojiPicker;
+
+  const popup = document.createElement('div');
+  popup.className = 'emoji-picker-popup';
+  popup.id = 'emojiPopup';
+
+  EMOJI_LIST.forEach(em => {
+    const btn = document.createElement('button');
+    btn.textContent = em;
+    btn.onclick = (e) => { e.stopPropagation(); pickEmoji(em); };
+    popup.appendChild(btn);
+  });
+
+  document.body.appendChild(overlay);
+  document.body.appendChild(popup);
+
+  const triggerBtn = document.getElementById(`settings-emoji${person}-btn`);
+  const rect = triggerBtn.getBoundingClientRect();
+  const popupW = 300;
+  let left = rect.left;
+  if (left + popupW > window.innerWidth - 8) left = window.innerWidth - popupW - 8;
+  popup.style.left = left + 'px';
+  popup.style.top = (rect.bottom + 6) + 'px';
+}
+
+function pickEmoji(em) {
+  document.getElementById(`settings-emoji${emojiPickerTarget}-btn`).textContent = em;
+  closeEmojiPicker();
+}
+
+function closeEmojiPicker() {
+  document.getElementById('emojiOverlay')?.remove();
+  document.getElementById('emojiPopup')?.remove();
+  emojiPickerTarget = null;
+}
+
 function renderSettingsForm() {
   const d = settingsCache || {};
-  document.getElementById('settings-emoji1').value = d.emoji1 || '';
-  document.getElementById('settings-name1').value  = d.name1  || '';
-  document.getElementById('settings-emoji2').value = d.emoji2 || '';
-  document.getElementById('settings-name2').value  = d.name2  || '';
+  document.getElementById('settings-emoji1-btn').textContent = d.emoji1 || '🐧';
+  document.getElementById('settings-name1').value            = d.name1  || '';
+  document.getElementById('settings-emoji2-btn').textContent = d.emoji2 || '🦓';
+  document.getElementById('settings-name2').value            = d.name2  || '';
 }
 
 async function saveSettings() {
   const data = {
-    emoji1: document.getElementById('settings-emoji1').value.trim() || '🐧',
-    name1:  document.getElementById('settings-name1').value.trim()  || 'Person 1',
-    emoji2: document.getElementById('settings-emoji2').value.trim() || '🦓',
-    name2:  document.getElementById('settings-name2').value.trim()  || 'Person 2',
+    emoji1: document.getElementById('settings-emoji1-btn').textContent.trim() || '🐧',
+    name1:  document.getElementById('settings-name1').value.trim()             || 'Person 1',
+    emoji2: document.getElementById('settings-emoji2-btn').textContent.trim() || '🦓',
+    name2:  document.getElementById('settings-name2').value.trim()             || 'Person 2',
   };
   await db.collection('couples').doc(coupleCode).collection('settings').doc('prefs').set(data);
   settingsCache = data;
